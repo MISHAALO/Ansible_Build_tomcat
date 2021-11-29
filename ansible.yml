@@ -1,0 +1,57 @@
+---
+- name: Install mvn
+  hosts: build
+  become: yes
+
+  tasks:
+    - name: Ensure mvn package is present
+      yum:
+        name: maven
+        state: present
+
+    - name: Ensure git package is	present
+      yum:
+        name: git
+        state: present
+
+- name: build
+  hosts: build
+
+  tasks:
+    - name: Git Clone sample app
+      git:
+        repo: 'https://github.com/boxfuse/boxfuse-sample-java-war-hello'
+        dest: /home/mbagdasaryan/del/
+
+    - name: Build sample app
+      shell: mvn package chdir="/home/mbagdasaryan/del/"
+
+- hosts: build
+  tasks:
+    - name: Transfer file from build to tomcat
+      synchronize:
+        src: /home/mbagdasaryan/del/target/hello-1.0.war
+        dest: /home/mbagdasaryan/
+        mode: pull
+      delegate_to: 127.0.0.1
+
+- name: Install tomcat
+  hosts: tomcat
+  become: yes
+
+  tasks:
+    - name: Ensure tomcat package is present
+      yum:
+        name: tomcat
+        state: present
+
+  tasks:
+    - name: Ensure tomcat service is started
+      service:
+        name: tomcat
+        state: started
+
+    - name: Ensure copy war
+      copy:
+        src: hello-1.0.war
+        dest: /d01/tomcat/webapps/
